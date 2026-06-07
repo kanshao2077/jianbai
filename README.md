@@ -8,12 +8,17 @@
 
 https://kanshao2077.github.io/jianbai/
 
+<img width="4186" height="2248" alt="CleanShot 2026-06-07 at 14 41 05@2x" src="https://github.com/user-attachments/assets/760a044f-d753-4a50-9a37-1255f94b9687" />
+
+
 ## 它能做什么
 
 - 多列写作：素材、草稿、修改稿、成稿分开写。
 - 自动保存：内容存在浏览器本地，刷新页面也还在。
 - 一键复制：点进某一列后，可以复制当前列内容。
 - 一键清空：需要重写时，可以清掉本地保存的内容。
+<img width="2564" height="2680" alt="CleanShot 2026-06-07 at 14 41 29@2x" src="https://github.com/user-attachments/assets/ffe110c0-9673-4af1-aa7c-08b9ba1385db" />
+
 
 ## 注意
 
