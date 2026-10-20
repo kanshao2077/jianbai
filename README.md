@@ -37,17 +37,17 @@
 
 ## Run locally
 
-使用 Node.js 22。
+使用 Node.js 22 和 pnpm 11.25.0。
 
 ```bash
-npm install --no-package-lock
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 打开终端显示的本地地址。生产构建：
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 输出目录为 `dist/`。仓库已配置 GitHub Pages，推送到 `main` 后自动构建并部署。

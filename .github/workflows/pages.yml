@@ -27,13 +27,18 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
       - name: Install dependencies
-        run: npm install --no-package-lock
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         env:
           GITHUB_PAGES: 'true'
-        run: npm run build
+        run: pnpm run build
 
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html
