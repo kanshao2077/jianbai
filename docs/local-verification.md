@@ -77,3 +77,5 @@
 README 已备份至 `docs/archive/README-before-verso-2026-10-20.md`，新版使用演示文字生成的界面截图，不包含个人稿件。字标保持 Futura Medium 外形及 22px 比例，改为固定文字的矢量轮廓，不发布完整字体文件。写作时其他栏不透明度为 0.7。
 
 本地生产构建和 GitHub Pages 子路径构建、类型检查、Biome 及 diff 检查通过。发布前再次验证 Markdown、表格、任务清单、复制、折叠与撤销历史、专注与滚动恢复、系统主题、菜单、真实全屏、Reset 确认取消及 Undo；标题、正文继续使用全部八个原存储键。
+
+部署采用 pnpm 11.25.0 和 `--frozen-lockfile`，避免编辑器依赖自动升级造成 peer 冲突。仅为构建工具 esbuild 配置 `allowBuilds`；独立干净目录中的锁定安装及初始化已通过。
