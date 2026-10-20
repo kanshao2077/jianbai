@@ -2,18 +2,26 @@ import React, { useEffect, useCallback } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import { TableKit } from '@tiptap/extension-table';
+import { TaskList } from '@tiptap/extension-list';
 import { Markdown } from 'tiptap-markdown';
+import { MarkdownTableInput } from '@/lib/markdown-table-input';
+import { normalizeTaskListHTML } from '@/lib/markdown-paste';
+import { MarkdownTable } from '@/lib/markdown-table';
+import { MarkdownTaskInput } from '@/lib/markdown-task-input';
+import { MarkdownTaskItem } from '@/lib/markdown-task-item';
 
 interface TiptapEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  label: string;
   onFocus?: () => void;
   onBlur?: () => void;
   editorRef?: React.MutableRefObject<Editor | null>;
 }
 
-export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, placeholder, onFocus, onBlur, editorRef }) => {
+export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, placeholder, label, onFocus, onBlur, editorRef }) => {
   // 使用 useCallback 稳定回调引用
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
     const html = editor.getHTML();
@@ -36,18 +44,31 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
         },
       }),
       Placeholder.configure({
-        placeholder: placeholder || '开始输入...',
+        placeholder: placeholder || 'Write here…',
+      }),
+      TableKit.configure({ table: false }),
+      MarkdownTable.configure({ resizable: false, renderWrapper: true }),
+      MarkdownTableInput,
+      MarkdownTaskInput,
+      TaskList,
+      MarkdownTaskItem.configure({
+        nested: true,
+        a11y: { checkboxLabel: node => node.textContent || 'Task' },
       }),
       Markdown.configure({
         html: true, // 允许 HTML
         transformPastedText: true, // 自动转换粘贴的 Markdown 文本
-        transformCopiedText: false, // 复制时不转换为 Markdown
+        transformCopiedText: true, // 选区复制也保留 Markdown 结构
       }),
     ],
     content: value,
     editorProps: {
+      transformPastedHTML: normalizeTaskListHTML,
       attributes: {
         class: 'tiptap-editor-content',
+        'aria-label': label,
+        role: 'textbox',
+        'aria-multiline': 'true',
       },
     },
     onUpdate: handleUpdate,
@@ -58,7 +79,7 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
   // 当外部 value 变化时更新编辑器内容
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
+      editor.commands.setContent(value, { emitUpdate: false });
     }
   }, [value, editor]);
 
@@ -67,20 +88,14 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
     if (editorRef && editor) {
       editorRef.current = editor;
     }
-  }, [editor, editorRef]);
-
-  // 🔧 修复：组件卸载时销毁编辑器实例，防止内存泄漏
-  useEffect(() => {
     return () => {
-      if (editor && !editor.isDestroyed) {
-        editor.destroy();
-      }
+      if (editorRef && editorRef.current === editor) editorRef.current = null;
     };
-  }, [editor]);
+  }, [editor, editorRef]);
 
   return (
     <div className="w-full h-full">
-      <EditorContent editor={editor} className="w-full h-full px-6 pt-2" />
+      <EditorContent editor={editor} className="writer-editor-frame w-full h-full" />
     </div>
   );
 };

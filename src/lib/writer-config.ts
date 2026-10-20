@@ -1,5 +1,5 @@
 /**
- * 见白写作工具配置常量
+ * verso. writing workspace configuration
  */
 
 // 防抖延迟时间
@@ -20,40 +20,40 @@ export interface ColumnConfig {
 }
 
 export const COLUMNS: ColumnConfig[] = [
-  { 
-    id: 'material', 
-    title: '素材', 
-    storageKey: 'writer_material', 
-    titleKey: 'writer_title_material', 
+  {
+    id: 'material',
+    title: 'SOURCE',
+    storageKey: 'writer_material',
+    titleKey: 'writer_title_material',
     bgColor: 'bg-braun-material',
-    titlePlaceholder: '给素材起个名？',
-    contentPlaceholder: '素材呢？'
+    titlePlaceholder: 'Untitled',
+    contentPlaceholder: 'Gather your references…'
   },
-  { 
-    id: 'draft1', 
-    title: '初稿', 
-    storageKey: 'writer_draft1', 
-    titleKey: 'writer_title_draft1', 
+  {
+    id: 'draft1',
+    title: 'DRAFT',
+    storageKey: 'writer_draft1',
+    titleKey: 'writer_title_draft1',
     bgColor: 'bg-braun-draft1',
-    titlePlaceholder: '倒是取个名啊！',
-    contentPlaceholder: '随便写写...'
+    titlePlaceholder: 'Untitled',
+    contentPlaceholder: 'Start writing…'
   },
-  { 
-    id: 'draft2', 
-    title: '二稿', 
-    storageKey: 'writer_draft2', 
-    titleKey: 'writer_title_draft2', 
+  {
+    id: 'draft2',
+    title: 'EDIT',
+    storageKey: 'writer_draft2',
+    titleKey: 'writer_title_draft2',
     bgColor: 'bg-braun-draft2',
-    titlePlaceholder: '再想一个？',
-    contentPlaceholder: '精修一下...'
+    titlePlaceholder: 'Untitled',
+    contentPlaceholder: 'Refine your draft…'
   },
-  { 
-    id: 'final', 
-    title: '定稿', 
-    storageKey: 'writer_final', 
-    titleKey: 'writer_title_final', 
+  {
+    id: 'final',
+    title: 'FINAL',
+    storageKey: 'writer_final',
+    titleKey: 'writer_title_final',
     bgColor: 'bg-braun-final',
-    titlePlaceholder: '最终命名...',
-    contentPlaceholder: '大功告成！'
+    titlePlaceholder: 'Untitled',
+    contentPlaceholder: 'Make it ready…'
   },
 ];

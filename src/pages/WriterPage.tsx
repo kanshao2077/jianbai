@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Info, Copy, CheckCheck, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, CheckCheck, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { TiptapEditor } from '@/components/TiptapEditor';
+import { WriterMenu } from '@/components/WriterMenu';
+import { VersoWordmark } from '@/components/VersoWordmark';
 import { Editor } from '@tiptap/react';
 import { useDebounce } from '@/hooks/use-debounce';
-import { COLUMNS, DEBOUNCE_DELAY, COPY_FEEDBACK_DURATION, EDITING_STATUS_DURATION, SCROLL_HIDE_DELAY } from '@/lib/writer-config';
-import type { ColumnConfig } from '@/lib/writer-config';
+import { COLUMNS, DEBOUNCE_DELAY, COPY_FEEDBACK_DURATION, SCROLL_HIDE_DELAY } from '@/lib/writer-config';
 
 // 字数统计函数 - 优化版本，无需创建 DOM 元素
 const countCharacters = (html: string): number => {
@@ -28,6 +29,8 @@ const WriterPage: React.FC = () => {
   const [titles, setTitles] = useState<{ [key: string]: string }>({});
   const [showAbout, setShowAbout] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [soloColumn, setSoloColumn] = useState<string | null>(null);
+  const aboutDialogRef = useRef<HTMLDialogElement>(null);
   
   // 沉浸式写作流状态
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
@@ -39,14 +42,55 @@ const WriterPage: React.FC = () => {
   // 滚动容器引用 - 用于幽灵滚动条
   const scrollContainerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const scrollTimers = useRef<{ [key: string]: number }>({});
+  const editingTimers = useRef<{ [key: string]: number }>({});
+  const soloScrollPositions = useRef<{ [key: string]: number } | null>(null);
   
-  // 编辑器实例引用 - 用于复制功能（获取纯文本）
+  // 编辑器实例引用 - 用于复制 Markdown
   const editorRefs = useRef<{ [key: string]: Editor | null }>({
     material: null,
     draft1: null,
     draft2: null,
     final: null,
   });
+
+  useEffect(() => {
+    const dialog = aboutDialogRef.current;
+    if (showAbout) dialog?.showModal();
+    else if (dialog?.open) dialog.close();
+  }, [showAbout]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !showAbout) setSoloColumn(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAbout]);
+
+  useEffect(() => () => {
+    Object.values(scrollTimers.current).forEach(clearTimeout);
+    Object.values(editingTimers.current).forEach(clearTimeout);
+  }, []);
+
+  useEffect(() => {
+    if (soloColumn) {
+      const frame = requestAnimationFrame(() => {
+        const editor = editorRefs.current[soloColumn];
+        if (editor && !editor.isDestroyed) editor.view.focus();
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    if (!soloScrollPositions.current) return;
+    const positions = soloScrollPositions.current;
+    const frame = requestAnimationFrame(() => {
+      Object.entries(positions).forEach(([id, top]) => {
+        const container = scrollContainerRefs.current[id];
+        if (container) container.scrollTop = top;
+      });
+      soloScrollPositions.current = null;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [soloColumn]);
 
   // 从 LocalStorage 加载数据（仅首次渲染）
   useEffect(() => {
@@ -98,21 +142,24 @@ const WriterPage: React.FC = () => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  // 更新内容
-  const updateContent = useCallback((id: string, value: string) => {
-    setContents(prev => ({ ...prev, [id]: value }));
-    // 标记为正在编辑
+  // Keep the writing indicator stable during a burst of typing.
+  const markEditing = useCallback((id: string) => {
+    clearTimeout(editingTimers.current[id]);
     setEditingStatus(prev => ({ ...prev, [id]: true }));
-    // 后标记为已保存
-    setTimeout(() => {
+    editingTimers.current[id] = window.setTimeout(() => {
       setEditingStatus(prev => ({ ...prev, [id]: false }));
-    }, EDITING_STATUS_DURATION);
+    }, 1400);
   }, []);
 
-  // 更新标题
+  const updateContent = useCallback((id: string, value: string) => {
+    setContents(prev => ({ ...prev, [id]: value }));
+    markEditing(id);
+  }, [markEditing]);
+
   const updateTitle = useCallback((id: string, value: string) => {
     setTitles(prev => ({ ...prev, [id]: value }));
-  }, []);
+    markEditing(id);
+  }, [markEditing]);
   
   // 幽灵滚动条处理 - 滚动时显示，停止后隐藏
   const handleScroll = useCallback((id: string) => {
@@ -137,7 +184,7 @@ const WriterPage: React.FC = () => {
   const copyCurrentColumn = useCallback(async () => {
     // 检查是否有最后激活的列
     if (!lastActiveColumn) {
-      toast.warning('请先点击要复制的编辑框');
+      toast.warning('Select a column to copy');
       return;
     }
     
@@ -145,30 +192,29 @@ const WriterPage: React.FC = () => {
     const editor = editorRefs.current[lastActiveColumn];
     
     if (!editor || editor.isDestroyed) {
-      toast.error('编辑器未初始化，请重试');
+      toast.error('The editor is not ready. Try again.');
       return;
     }
     
-    // 获取纯文本
-    const textToCopy = editor.getText();
+    const textToCopy = editor.storage.markdown.getMarkdown();
     
     // 检查内容是否为空
     if (!textToCopy || textToCopy.trim() === '') {
-      toast.info('当前列内容为空');
+      toast.info('This column is empty');
       return;
     }
     
     // 找到当前列的名称
     const currentColumn = COLUMNS.find(col => col.id === lastActiveColumn);
-    const columnName = currentColumn?.title || '内容';
+    const columnName = currentColumn?.title || 'column';
     
     try {
       // 尝试使用现代 Clipboard API
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
-      toast.success(`已复制 ${columnName}`, {
-        description: `${textToCopy.length} 个字符`,
+      toast.success(`Copied ${columnName}`, {
+        description: `${textToCopy.length} characters · Markdown`,
         duration: COPY_FEEDBACK_DURATION,
       });
     } catch {
@@ -180,21 +226,22 @@ const WriterPage: React.FC = () => {
         textArea.style.left = '-9999px';
         document.body.appendChild(textArea);
         textArea.select();
-        document.execCommand('copy');
+        const didCopy = document.execCommand('copy');
         document.body.removeChild(textArea);
+        if (!didCopy) throw new Error('Copy failed');
         
         setCopied(true);
         setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
-        toast.success(`已复制 ${columnName}`);
+        toast.success(`Copied ${columnName}`);
       } catch {
-        toast.error('复制失败，请手动选择文本复制');
+        toast.error('Could not copy. Select the text and copy manually.');
       }
     }
   }, [lastActiveColumn]);
 
-  // 一键清空所有列的标题和正文
+  // One clear action, with a complete four-column undo.
   const clearAllContent = useCallback(() => {
-    // 清空所有列的内容和标题
+    const snapshot = { contents: { ...contents }, titles: { ...titles } };
     COLUMNS.forEach(col => {
       localStorage.removeItem(col.storageKey);
       localStorage.removeItem(col.titleKey);
@@ -205,69 +252,65 @@ const WriterPage: React.FC = () => {
     // 清空所有编辑器内容
     Object.values(editorRefs.current).forEach(editor => {
       if (editor && !editor.isDestroyed) {
-        editor.commands.clearContent();
+        editor.commands.clearContent(false);
       }
     });
     
-    toast.success('已清空所有内容');
-  }, []);
+    toast.success('Workspace reset', {
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setContents(snapshot.contents);
+          setTitles(snapshot.titles);
+          COLUMNS.forEach(col => {
+            editorRefs.current[col.id]?.commands.setContent(snapshot.contents[col.id] || '', { emitUpdate: false });
+          });
+        },
+      },
+    });
+  }, [contents, titles]);
 
-  // 重置所有内容
-  const resetAll = useCallback(() => {
-    if (window.confirm('确定要清空所有内容吗？此操作不可恢复。')) {
-      COLUMNS.forEach(col => {
-        localStorage.removeItem(col.storageKey);
-        localStorage.removeItem(col.titleKey);
-      });
-      setContents({});
-      setTitles({});
-      toast.success('已重置所有内容');
+  const toggleSolo = useCallback(() => {
+    if (soloColumn) {
+      setSoloColumn(null);
+      return;
     }
-  }, []);
+    const id = lastActiveColumn || 'final';
+    soloScrollPositions.current = Object.fromEntries(
+      Object.entries(scrollContainerRefs.current).map(([column, container]) => [column, container?.scrollTop || 0]),
+    );
+    setCollapsed(prev => ({ ...prev, [id]: false }));
+    setSoloColumn(id);
+  }, [soloColumn, lastActiveColumn]);
+
+  const activeColumnTitle = COLUMNS.find(col => col.id === lastActiveColumn)?.title;
+  const isWriting = Boolean(focusedColumn && editingStatus[focusedColumn]);
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-background">
-      {/* 顶部工具栏 - Braun 工业风格 */}
-      <header className="flex items-center justify-between pl-4 pr-2 py-2 border-b border-border/30 bg-background">
-        <div className="flex-1"></div>
-        <h1 className="text-2xl font-black tracking-tighter text-black dark:text-white">见白</h1>
-        <div className="flex-1 flex items-center justify-end gap-4 pr-2">
+    <div className="writer-shell w-full flex flex-col overflow-hidden bg-background" data-writing={isWriting || undefined} data-solo={Boolean(soloColumn) || undefined}>
+      <header className="writer-toolbar flex items-center justify-end border-b border-border bg-background">
+        <h1 className="writer-wordmark"><VersoWordmark /></h1>
+        <div className="writer-toolbar-controls flex items-center gap-1">
           <button
-            onClick={() => setShowAbout(true)}
-            className="p-2 rounded-full bg-black/5 hover:bg-black/10 text-neutral-600 hover:text-braun-orange active:scale-95 transition-all duration-75 hover:scale-110"
-            style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
-            title="关于"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-          <button
+            type="button"
             onClick={copyCurrentColumn}
-            className="p-2 rounded-full bg-black/5 hover:bg-black/10 text-neutral-600 hover:text-braun-orange active:scale-95 transition-all duration-75 hover:scale-110"
-            style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
-            title="复制当前列"
+            className="writer-icon-button"
+            title={activeColumnTitle ? `Copy ${activeColumnTitle} · Markdown` : 'Copy current column · Markdown'}
+            aria-label={activeColumnTitle ? `Copy ${activeColumnTitle}` : 'Copy current column'}
           >
-            {copied ? <CheckCheck className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            {copied ? <CheckCheck className="w-[18px] h-[18px]" /> : <Copy className="w-[18px] h-[18px]" />}
           </button>
-          <button
-            onClick={clearAllContent}
-            className="p-2 rounded-full bg-black/5 hover:bg-black/10 text-neutral-600 hover:text-red-500 active:scale-95 transition-all duration-75 hover:scale-110"
-            style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
-            title="一键清空所有内容"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={resetAll}
-            className="p-2 rounded-full bg-black/5 hover:bg-black/10 text-neutral-600 hover:text-braun-orange active:scale-95 transition-all duration-75 hover:scale-110"
-            style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
-            title="重置"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <WriterMenu
+            onAbout={() => setShowAbout(true)}
+            onToggleFocus={toggleSolo}
+            focused={Boolean(soloColumn)}
+            onReset={clearAllContent}
+          />
         </div>
       </header>
       {/* 主编辑区域 - 工业质感背景 */}
-      <div className="flex-1 flex overflow-x-auto overflow-y-hidden no-scrollbar bg-neutral-100">
+      <div className="writer-columns flex-1 min-h-0 flex overflow-x-auto overflow-y-hidden bg-background">
         {COLUMNS.map((col) => {
           const isCollapsed = collapsed[col.id];
           const charCount = charCounts[col.id] || 0;
@@ -275,61 +318,72 @@ const WriterPage: React.FC = () => {
           return (
             <div
               key={col.id}
-              className={`flex-shrink-0 ${isCollapsed ? 'w-[60px]' : 'flex-1 min-w-0'} h-full ${col.bgColor} border-r border-black/5 transition-all duration-300 relative overflow-hidden rounded-[3px]`}
+              className={`writer-column flex-shrink-0 ${isCollapsed ? 'w-[52px]' : 'writer-column-open flex-1'} h-full ${col.bgColor} border-r border-border relative overflow-hidden`}
+              hidden={Boolean(soloColumn && soloColumn !== col.id)}
+              data-active={focusedColumn === col.id ? 'true' : undefined}
               style={{ 
-                transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-                opacity: focusedColumn && focusedColumn !== col.id ? 0.5 : 1
+                transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)'
               }}
             >
-              {isCollapsed ? (
+              {isCollapsed && (
                 // 折叠状态 - 竖排标题
                 (<div className="h-full flex flex-col items-center justify-center relative">
                   <button
                     onClick={() => toggleCollapse(col.id)}
-                    className="absolute top-4 left-1/2 -translate-x-1/2 p-1.5 rounded-full bg-black/5 hover:bg-black/10 text-neutral-600 hover:text-braun-orange active:scale-95 transition-all duration-75"
+                    aria-label={`Expand ${col.title}`}
+                    title={`Expand ${col.title}`}
+                    className="writer-icon-button absolute top-3 left-1/2 -translate-x-1/2"
                     style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
-                  <div className="writing-mode-vertical text-xs font-bold uppercase tracking-wide text-neutral-700 tabular-nums" style={{ writingMode: 'vertical-rl' }}>
+                  <div className="writing-mode-vertical text-xs font-medium tracking-wide text-muted-foreground tabular-nums" style={{ writingMode: 'vertical-rl' }}>
                     {titles[col.id] || col.title}
                   </div>
                 </div>)
-              ) : (
-                // 展开状态 - 完整编辑器
-                (<div className="h-full flex flex-col">
+              )}
+                {/* Keep editors mounted so folding preserves selection and undo. */}
+                <div className="h-full flex flex-col" hidden={isCollapsed}>
                   {/* 列头部 - Braun 工业丝印风格 */}
-                  <div className="flex items-center justify-between px-4 py-1.5 border-b border-black/5">
+                  <div className="writer-column-header flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-bold uppercase tracking-wide text-[#333333] tabular-nums">{col.title}</h2>
+                      <h2 className="writer-column-label">{col.title}</h2>
                       {/* 状态呼吸灯 - 编辑时显示橙色圆点 */}
                       {editingStatus[col.id] && (
-                        <div className="w-2 h-2 rounded-full bg-braun-orange animate-pulse" title="正在编辑"></div>
+                        <span className="writer-editing-indicator" title="Editing" aria-label="Editing" />
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="writer-column-meta flex items-center gap-3">
                       {/* 字数统计 - 等宽数字 - 丝印刻度感 - 固定宽度确保对齐 */}
-                      <span className="font-mono text-[10px] text-[#333333] tracking-wide tabular-nums inline-block text-right" style={{ minWidth: '60px' }}>
-                        CNT: {charCount}
+                      <span className="writer-count text-xs text-muted-foreground tabular-nums inline-block text-right" aria-label={`${charCount} characters`}>
+                        {charCount}
                       </span>
-                      <button
+                      {!soloColumn && <button
                         onClick={() => toggleCollapse(col.id)}
-                        className="p-1.5 rounded-full bg-black/5 hover:bg-black/10 text-neutral-600 hover:text-braun-orange active:scale-95 transition-all duration-75"
+                        aria-label={`Collapse ${col.title}`}
+                        title={`Collapse ${col.title}`}
+                        className="writer-icon-button"
                         style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
                       >
                         <ChevronLeft className="w-4 h-4" />
-                      </button>
+                      </button>}
                     </div>
                   </div>
 
-                  {/* 自定义子标题输入框 - Braun 工业风格 - 居中对齐 - 极淡水印 */}
-                  <div className="px-4 py-1 border-b border-black/5">
+                  {/* 稿件标题与正文左边缘对齐 */}
+                  <div className="writer-title-frame">
                     <input
                       type="text"
                       value={titles[col.id] || ''}
                       onChange={(e) => updateTitle(col.id, e.target.value)}
                       placeholder={col.titlePlaceholder}
-                      className="w-full bg-transparent border-none outline-none text-black font-sans font-bold text-sm focus:text-black transition-colors placeholder:text-neutral-300 placeholder:opacity-30 text-center caret-braun-orange"
+                      aria-label={`${col.title} title`}
+                      className="writer-title w-full bg-transparent border-none caret-braun-orange"
+                      onFocus={() => {
+                        setFocusedColumn(col.id);
+                        setLastActiveColumn(col.id);
+                      }}
+                      onBlur={() => setFocusedColumn(null)}
                       style={{ fontVariantNumeric: 'tabular-nums' }}
                     />
                   </div>
@@ -343,6 +397,7 @@ const WriterPage: React.FC = () => {
                       value={contents[col.id] || ''}
                       onChange={(value) => updateContent(col.id, value)}
                       placeholder={col.contentPlaceholder}
+                      label={`${col.title} content`}
                       onFocus={() => {
                         setFocusedColumn(col.id);
                         setLastActiveColumn(col.id); // 记录最后激活的列
@@ -358,118 +413,41 @@ const WriterPage: React.FC = () => {
                       })()}
                     />
                   </div>
-                </div>)
-              )}
+                </div>
             </div>
           );
         })}
       </div>
       {/* 关于模态框 - Braun 工业规格说明书 */}
-      {showAbout && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowAbout(false)}
+        <dialog
+          ref={aboutDialogRef}
+          className="writer-about-dialog"
+          aria-labelledby="writer-about-title"
+          onCancel={(event) => { event.preventDefault(); setShowAbout(false); }}
+          onClick={(event) => { if (event.target === event.currentTarget) setShowAbout(false); }}
         >
-          <div
-            className="bg-[#FDFDFD] rounded-none shadow-2xl max-w-3xl w-full p-8 max-h-[85vh] overflow-y-auto border border-neutral-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* HEADER 页眉 - 紧凑无间距 */}
-            <div className="mb-2">
-              <h2 className="text-2xl font-black tracking-tighter text-black">见白 / JIAN BAI</h2>
-              <p className="font-mono text-[10px] text-neutral-400 tracking-wider mb-[NaNpx]">A creation birthed by Kan Shao 2077</p>
+          <div className="writer-about-content" onClick={(event) => event.stopPropagation()}>
+            <div className="writer-about-heading">
+              <h2 id="writer-about-title" className="writer-wordmark"><VersoWordmark /></h2>
+              <button type="button" className="writer-icon-button" aria-label="Close About" onClick={() => setShowAbout(false)}>
+                <X className="w-[18px] h-[18px]" />
+              </button>
             </div>
-
-            {/* SECTION 1: PHILOSOPHY / 写作哲学 */}
-            <div className="-mt-2">
-              <h3 className="font-sans text-base font-bold tracking-widest mb-4 pt-6 border-dotted border-[0.8px] border-[rgb(245,245,245)] text-[#a3a3a3ff]">PHILOSOPHY / 写作哲学</h3>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <span className="font-mono text-sm text-[#EB5208] shrink-0">01</span>
-                  <div>
-                    <p className="font-sans font-bold text-sm tracking-wide text-black uppercase mb-1">CHAOS · 始于混沌</p>
-                    <p className="font-serif text-sm leading-relaxed text-neutral-600">[素材] 是灵感的堆栈、是世界的原始切片。深灰、沉重、未经审视。我们从噪点中提取信号。此时请无需在意格式。我说的。</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <span className="font-mono text-sm text-[#EB5208] shrink-0">02</span>
-                  <div>
-                    <p className="font-sans font-bold text-sm tracking-wide text-black uppercase mb-1">
-                      FILTER · 思维窄门
-                    </p>
-                    <p className="font-serif text-sm leading-relaxed text-neutral-600">[初稿] 是心流的输出。不问逻辑，不纠措辞，只求宣泄。[二稿] 是理性的回归，在此处重构逻辑，修剪枝蔓。在此之间，权衡、试错、推翻。剔除一切非必要的冗余。</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <span className="font-mono text-sm text-[#EB5208] shrink-0">03</span>
-                  <div>
-                    <p className="font-sans font-bold text-sm tracking-wide text-black uppercase mb-1">
-                      VOID · 落纸见白
-                    </p>
-                    <p className="font-serif text-sm leading-relaxed text-neutral-600">[定稿] 是纯粹的白，可用于存放最终的交付。白不是空无一物，而是极多之上的极少，是所有可能性的最终形态。当文字进入此栏，代表它已准备好面对世界。器物有形，而用无界。</p>
-                  </div>
-                </div>
-              </div>
+            <p className="writer-about-intro">A quiet workspace for parallel writing.</p>
+            <div className="writer-about-section">
+              <h3>From source to final</h3>
+              <p>Four columns for references, drafts, edits, and finished work. Write in Markdown, copy with formatting, or focus on a single column.</p>
             </div>
-
-            {/* SECTION 2: DESIGN SPECS / 设计参数 */}
-            <div className="mt-8">
-              <h3 className="font-sans text-base font-bold tracking-widest text-neutral-400 mb-4 border-t border-neutral-100 pt-6">
-                DESIGN SPECS / 设计参数
-              </h3>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <span className="font-mono text-sm text-[#EB5208] shrink-0">01</span>
-                  <div>
-                    <p className="font-sans font-bold text-sm tracking-wide text-black uppercase mb-1">STRUCTURE · 秩序</p>
-                    <p className="font-serif text-sm leading-relaxed text-neutral-600">
-                      四栏渐进布局 (素材→定稿)。用物理空间的推移，具象化思维的进阶。
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <span className="font-mono text-sm text-[#EB5208] shrink-0">02</span>
-                  <div>
-                    <p className="font-sans font-bold text-sm tracking-wide text-black uppercase mb-1">
-                      AESTHETIC · 质感
-                    </p>
-                    <p className="font-serif text-sm leading-relaxed text-neutral-600">橙色脉搏。亮起的呼吸灯是系统的脉搏。自动保存。聚焦后蔡司光学高亮。</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <span className="font-mono text-sm text-[#EB5208] shrink-0">03</span>
-                  <div>
-                    <p className="font-sans font-bold text-sm tracking-wide text-black uppercase mb-1">
-                      PRECISION · 精密
-                    </p>
-                    <p className="font-serif text-sm leading-relaxed text-neutral-600">参数化字数统计、支持 markdown 格式，零干扰隐藏式滚动条。可一键复制，但也极致克制。</p>
-                  </div>
-                </div>
-              </div>
+            <div className="writer-about-section">
+              <h3>Saved here</h3>
+              <p>Your titles and drafts save automatically in this browser. No account, no cloud sync. Clearing browser data removes them, so copy out work you want to keep.</p>
             </div>
-
-
-            {/* FOOTER 页脚 */}
-            <div className="pt-6 border-t border-neutral-100 mt-[15px]">
-              <p className="font-mono text-[10px] text-neutral-300 tracking-wider">
-                © 2025 JIAN BAI WRITING SYSTEM · DESIGNED FOR CLARITY
-              </p>
+            <div className="writer-about-footer">
+              <p>Made by Kan Shao 2077.</p>
+              <button type="button" onClick={() => setShowAbout(false)} className="writer-text-button">Back to writing</button>
             </div>
-
-            {/* 关闭按钮 - 纸张复古感 */}
-            <button
-              onClick={() => setShowAbout(false)}
-              className="mt-6 w-full py-3 bg-[#F5F1E8] text-black rounded-none hover:bg-[#EDE7D9] transition-colors font-sans font-bold text-xs uppercase tracking-widest shadow-sm border border-neutral-200"
-            >
-              开始写作 / START WRITING
-            </button>
           </div>
-        </div>
-      )}
+        </dialog>
     </div>
   );
 };

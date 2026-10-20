@@ -3,7 +3,7 @@ import containerQuery from '@tailwindcss/container-queries';
 import typography from '@tailwindcss/typography';
 
 export default {
-    darkMode: ['class'],
+    darkMode: 'media',
     content: [
         './index.html',
         './pages/**/*.{ts,tsx}',

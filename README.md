@@ -1,90 +1,59 @@
-# ✍️ 见白 Jian Bai
+<h1 align="center">verso.</h1>
+<p align="center">Less. Better.</p>
+<p align="center">一个安静的四栏写作工作台。</p>
+<p align="center">
+  <a href="https://kanshao2077.github.io/jianbai/">Open verso.</a>
+  &nbsp;·&nbsp;
+  <a href="docs/images/verso-dark.png">Dark appearance</a>
+</p>
 
-拒绝跳转，平行视野。
+![verso. — 四栏写作工作台](docs/images/verso-light.png)
 
-见白是一个纯本地的四栏写作工作台，专门解决写文档时“反复横跳”的痛苦：素材、初稿、二稿、定稿并排展开，不用在窗口、Tab 和文档段落之间来回切换。
+素材、草稿、修改与定稿，同时留在眼前。少一些窗口切换，让对照、推敲和写作自然发生。
 
-电脑端体验：
+## A place for every stage
 
-https://kanshao2077.github.io/jianbai/
+| SOURCE | DRAFT | EDIT | FINAL |
+| :--- | :--- | :--- | :--- |
+| 收集参考与摘录 | 写下第一版想法 | 对照、修改与整理 | 留下准备交付的文字 |
 
-<img width="4186" height="2248" alt="CleanShot 2026-06-07 at 14 41 05@2x" src="https://github.com/user-attachments/assets/760a044f-d753-4a50-9a37-1255f94b9687" />
+四栏各有独立标题、字符统计和滚动位置。可以收起暂时不用的栏，也可以进入单栏专注，按 `Esc` 回到完整视野。
 
-## 🤯 为什么做它
+## Made for writing
 
-写文档最烦的不是打字，而是视野被打断。
+- **Markdown** — 输入或粘贴标题、列表、链接、引用、代码、普通表格和任务清单；复制时保留 Markdown 结构。
+- **Local autosave** — 标题和正文自动保存在当前浏览器，无需账号。
+- **Quiet focus** — 输入时，其他栏轻微淡出；停笔后恢复。橙色呼吸灯提示正在编辑。
+- **Light & dark** — 外观随系统切换，尊重系统的减少动态效果设置。
+- **Only what matters** — 顶栏保留复制与更多；菜单提供 `Info`、`Focus`、`Fullscreen` 和 `Reset`。重置需确认，并可通过 `Undo` 恢复。
 
-- ❌ 写一个文档要参考好几个材料，切来切去，切过去又忘了自己要看什么。
-- ❌ 做方案 A/B 对比时，只能在一个文档里上下滚，逻辑容易断。
-- ❌ 想改一段话又怕改废，只能复制一堆“备份段落”，最后文档越来越脏。
+普通表格可直接粘贴，也可输入表头及分隔行后按 Enter 创建。输入 `- [ ] ` 或 `- [x] ` 创建任务，点击复选框切换状态。复杂表格复制时保留为 HTML，避免丢失结构。
 
-见白的解决方式很直接：把写作过程摊开。左边放素材，中间做迭代，右边收定稿。让对比、修改和推进发生在同一个视野里。
+## Your words, saved here
 
-## 🎯 它适合什么场景
+内容只保存在**当前浏览器**的本地存储中，不提供云端同步。换设备或浏览器不会自动带走稿件；清理浏览器数据会移除已保存内容。重要稿件请及时复制到自己的文档中。
 
-- 写方案、复盘、汇报、邮件、公众号草稿。
-- 把零散素材整理成结构化文档。
-- 同时对比多个版本，不想反复滚动查找。
-- 想改稿但又不想污染原文。
-- 办公环境不方便使用云端编辑器，只想要一个本地可用的写作台。
+已有见白版本的标题与正文沿用原存储键，无需迁移。
 
-## 💡 核心功能
+## Run locally
 
-- ✅ 四栏分屏：素材、初稿、二稿、定稿并排处理，一眼看完整个写作链路。
-- ✅ 本地自动保存：内容保存在当前浏览器本地，不需要登录，也不依赖后端服务。
-- ✅ Markdown 友好：支持常见 Markdown 输入和粘贴转换，写作时无需到处找格式按钮。
-- ✅ 一键复制：聚焦某一列后，可以直接复制当前列内容。
-- ✅ 一键清空：需要重写时，可以清掉本地保存的内容。
-- ✅ 折叠列：暂时不用的列可以收起，给当前写作区让空间。
-
-<img width="2564" height="2680" alt="CleanShot 2026-06-07 at 14 41 29@2x" src="https://github.com/user-attachments/assets/ffe110c0-9673-4af1-aa7c-08b9ba1385db" />
-
-## ⚙️ 体验细节
-
-- 🟠 橙色脉搏：编辑时的呼吸灯提示保存状态。
-- 📐 博朗风格：克制、低噪音，把注意力留给文字。
-- 👻 幽灵滚动条：滚动时出现，静止后隐藏，不遮挡视线。
-- 📊 参数化统计：每列实时显示字符计量，方便控制篇幅。
-
-## 💾 数据说明
-
-见白不是云文档。
-
-内容只保存在当前浏览器的本地存储里。换电脑、换浏览器、清理浏览器数据，都可能导致内容丢失。重要内容写完后，请及时复制到你自己的正式文档或仓库里。
-
-这个设计是有意为之：少一点账号、同步和权限问题，多一点直接可用。
-
-## 🛠️ 本地运行
-
-需要先安装 Node.js，建议 20 或以上版本。
+使用 Node.js 22。
 
 ```bash
 npm install --no-package-lock
 npm run dev
 ```
 
-打开终端里显示的网址，就能在本地预览。
-
-## 📦 打包
+打开终端显示的本地地址。生产构建：
 
 ```bash
 npm run build
 ```
 
-打包结果会生成在 `dist` 目录。
+输出目录为 `dist/`。仓库已配置 GitHub Pages，推送到 `main` 后自动构建并部署。
 
-## 🚀 部署到 GitHub Pages
+---
 
-这个仓库已经带了 GitHub Pages 自动部署配置。
+Made by [Kan Shao 2077](https://github.com/kanshao2077).
 
-只要把代码推送到 `main` 分支，GitHub 会自动打包并发布到：
-
-https://kanshao2077.github.io/jianbai/
-
-## 🧩 来源
-
-这个项目来自秒哒导出的源码包。
-
-原应用链接：
-
-https://www.miaoda.cn/projects/app-8cb8oymsg7wh
+最初基于[秒哒导出的项目](https://www.miaoda.cn/projects/app-8cb8oymsg7wh)整理。此前的 README 保存在 [archive](docs/archive/README-before-verso-2026-10-20.md)。

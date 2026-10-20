@@ -23,7 +23,7 @@ const App: React.FC = () => {
             </Routes>
           </main>
         </div>
-        <Toaster position="top-center" richColors />
+        <Toaster position="bottom-center" />
       </Router>
     </ErrorBoundary>
   );
