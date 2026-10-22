@@ -1,3 +1,5 @@
+import { normalizeMarkdownHeadingsHTML } from './markdown-headings-paste';
+
 /** Preserve checked state when a webpage supplies GitHub-style task-list HTML. */
 export function normalizeTaskListHTML(html: string): string {
   if (!html.includes('task-list-item')) return html;
@@ -27,4 +29,8 @@ export function normalizeTaskListElement(element: HTMLElement): void {
       }
     });
   });
+}
+
+export function normalizePastedHTML(html: string): string {
+  return normalizeTaskListHTML(normalizeMarkdownHeadingsHTML(html));
 }

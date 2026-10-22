@@ -5,8 +5,9 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskList } from '@tiptap/extension-list';
 import { Markdown } from 'tiptap-markdown';
+import { MarkdownHeadingInput } from '@/lib/markdown-heading-input';
 import { MarkdownTableInput } from '@/lib/markdown-table-input';
-import { normalizeTaskListHTML } from '@/lib/markdown-paste';
+import { normalizePastedHTML } from '@/lib/markdown-paste';
 import { MarkdownTable } from '@/lib/markdown-table';
 import { MarkdownTaskInput } from '@/lib/markdown-task-input';
 import { MarkdownTaskItem } from '@/lib/markdown-task-item';
@@ -49,6 +50,7 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
       TableKit.configure({ table: false }),
       MarkdownTable.configure({ resizable: false, renderWrapper: true }),
       MarkdownTableInput,
+      MarkdownHeadingInput,
       MarkdownTaskInput,
       TaskList,
       MarkdownTaskItem.configure({
@@ -63,7 +65,7 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
     ],
     content: value,
     editorProps: {
-      transformPastedHTML: normalizeTaskListHTML,
+      transformPastedHTML: normalizePastedHTML,
       attributes: {
         class: 'tiptap-editor-content',
         'aria-label': label,
