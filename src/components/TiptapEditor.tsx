@@ -11,6 +11,7 @@ import { normalizePastedHTML } from '@/lib/markdown-paste';
 import { MarkdownTable } from '@/lib/markdown-table';
 import { MarkdownTaskInput } from '@/lib/markdown-task-input';
 import { MarkdownTaskItem } from '@/lib/markdown-task-item';
+import { SelectedTextDrag } from '@/lib/selected-text-drag';
 
 interface TiptapEditorProps {
   value: string;
@@ -51,6 +52,7 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
       MarkdownTable.configure({ resizable: false, renderWrapper: true }),
       MarkdownTableInput,
       MarkdownHeadingInput,
+      SelectedTextDrag,
       MarkdownTaskInput,
       TaskList,
       MarkdownTaskItem.configure({

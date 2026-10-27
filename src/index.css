@@ -181,6 +181,7 @@
 }
 /* The caret and column label carry focus while typing; keyboard focus stays visible. */
 .ProseMirror:focus { outline: none; }
+.ProseMirror-dropcursor { border-color: hsl(var(--braun-orange)) !important; }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
