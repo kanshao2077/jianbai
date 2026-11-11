@@ -5,6 +5,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskList } from '@tiptap/extension-list';
 import { Markdown } from 'tiptap-markdown';
+import { ClipboardText } from '@/lib/clipboard-text';
 import { MarkdownHeadingInput } from '@/lib/markdown-heading-input';
 import { MarkdownTableInput } from '@/lib/markdown-table-input';
 import { normalizePastedHTML } from '@/lib/markdown-paste';
@@ -54,6 +55,7 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
       MarkdownHeadingInput,
       SelectedTextDrag,
       MarkdownTaskInput,
+      ClipboardText,
       TaskList,
       MarkdownTaskItem.configure({
         nested: true,
@@ -62,7 +64,6 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onChange, pla
       Markdown.configure({
         html: true, // 允许 HTML
         transformPastedText: true, // 自动转换粘贴的 Markdown 文本
-        transformCopiedText: true, // 选区复制也保留 Markdown 结构
       }),
     ],
     content: value,

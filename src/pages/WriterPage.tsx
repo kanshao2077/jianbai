@@ -5,6 +5,7 @@ import { TiptapEditor } from '@/components/TiptapEditor';
 import { WriterMenu } from '@/components/WriterMenu';
 import { VersoWordmark } from '@/components/VersoWordmark';
 import { Editor } from '@tiptap/react';
+import { Slice } from '@tiptap/pm/model';
 import { useDebounce } from '@/hooks/use-debounce';
 import { COLUMNS, DEBOUNCE_DELAY, COPY_FEEDBACK_DURATION, SCROLL_HIDE_DELAY } from '@/lib/writer-config';
 
@@ -196,7 +197,9 @@ const WriterPage: React.FC = () => {
       return;
     }
     
-    const textToCopy = editor.storage.markdown.getMarkdown();
+    const { text: textToCopy, dom } = editor.view.serializeForClipboard(
+      new Slice(editor.state.doc.content, 0, 0),
+    );
     
     // 检查内容是否为空
     if (!textToCopy || textToCopy.trim() === '') {
@@ -210,11 +213,18 @@ const WriterPage: React.FC = () => {
     
     try {
       // 尝试使用现代 Clipboard API
-      await navigator.clipboard.writeText(textToCopy);
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/plain': new Blob([textToCopy], { type: 'text/plain' }),
+          'text/html': new Blob([dom.innerHTML], { type: 'text/html' }),
+        })]);
+      } else {
+        await navigator.clipboard.writeText(textToCopy);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
       toast.success(`Copied ${columnName}`, {
-        description: `${textToCopy.length} characters · Markdown`,
+        description: `${textToCopy.length} characters`,
         duration: COPY_FEEDBACK_DURATION,
       });
     } catch {
@@ -296,7 +306,7 @@ const WriterPage: React.FC = () => {
             type="button"
             onClick={copyCurrentColumn}
             className="writer-icon-button"
-            title={activeColumnTitle ? `Copy ${activeColumnTitle} · Markdown` : 'Copy current column · Markdown'}
+            title={activeColumnTitle ? `Copy ${activeColumnTitle}` : 'Copy current column'}
             aria-label={activeColumnTitle ? `Copy ${activeColumnTitle}` : 'Copy current column'}
           >
             {copied ? <CheckCheck className="w-[18px] h-[18px]" /> : <Copy className="w-[18px] h-[18px]" />}
